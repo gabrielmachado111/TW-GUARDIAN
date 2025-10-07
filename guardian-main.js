@@ -19,18 +19,12 @@ async function checkLicense(nick) {
       console.error("Falha no fetch das licenças");
       return false;
     }
-    const json = await resp.json();
-    const normalizedNick = normalizeNick(nick);
-    console.log("[GUARDIAN DEBUG]\nNick capturado: ", nick, "\nNick normalizado: ", normalizedNick, "\nLicenças disponíveis:");
-    for (const jsonKey in json) {
-      console.log("- JSON Key:", jsonKey, "| Normalizado:", normalizeNick(jsonKey), "| Data:", json[jsonKey]);
-      if (normalizeNick(jsonKey) === normalizedNick) {
-        console.log(`[GUARDIAN DEBUG] >> Licença encontrada para ${nick} (${jsonKey}): ${json[jsonKey]}`);
-        const expiry = new Date(json[jsonKey] + "T23:59:59");
-        const isValid = new Date() <= expiry;
-        console.log(`[GUARDIAN DEBUG] >> Data válida? ${isValid}`);
-        return isValid;
-      }
+for (const jsonKey in json) {
+    let nickNorm = normalizeNick(nick);
+    let keyNorm = normalizeNick(jsonKey);
+    console.log(`COMPARANDO [${keyNorm}] com [${nickNorm}]`);
+    if (keyNorm === nickNorm) {
+        //...
     }
     console.warn(`[GUARDIAN DEBUG] >> Licença NÃO encontrada para nick: "${nick}"`);
     return false;
@@ -280,6 +274,7 @@ console.log("DEBUG: Nick obtido", JSON.stringify(nick));
   runOverview();
   runMembers();
 })();
+
 
 
 
