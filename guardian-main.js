@@ -15,9 +15,20 @@ function getCurrentNick() {
 async function checkLicense(nick) {
   try {
     const resp = await fetch(LICENSE_URL + "?t=" + Date.now());
-    if (!resp.ok) {
-      alert("Erro ao acessar a lista de licenças.");
-      return false;
+    if (!resp.ok) return false;
+    const json = await resp.json();
+    // Testa por igualdade exata OU diferença só de hífen (traço normal vs traço unicode)
+    for (const jsonKey in json) {
+      if (
+        jsonKey === nick ||
+        jsonKey.replace(/[-–—]/g,'-') === nick.replace(/[-–—]/g,'-')
+      ) {
+        const expiry = new Date(json[jsonKey] + "T23:59:59");
+        return new Date() <= expiry;
+      }
+    }
+    return false;
+  } catch (e) { return false; }
     }
     const json = await resp.json();
     // Debug: log para garantir correspondência
@@ -305,6 +316,7 @@ console.log("DEBUG: Nick obtido", JSON.stringify(nick));
   runOverview();
   runMembers();
 })();
+
 
 
 
