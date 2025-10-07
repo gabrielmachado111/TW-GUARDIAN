@@ -2,36 +2,42 @@
 (async function(){
   const LICENSE_URL = "https://raw.githubusercontent.com/gabrielmachado111/Guardian/main/licenses.json";
 
-  // Função para normalizar nicks
 function normalizeNick(nick) {
   return nick
-          .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remove acentos
-          .replace(/[\u200B-\u200D\uFEFF]/g, "")            // Remove chars invisíveis
-          .replace(/\s+/g, ' ')                             // Espaços múltiplos para único
-          .replace(/[.,:;!?]+$/g, '')                       // Remove pontos finais/desnecessários
-          .trim()
-          .toLowerCase();                                   // Tudo minúsculo
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")            // Remove chars invisíveis
+    .replace(/\s+/g, ' ')                             // Espaços múltiplos para um só
+    .replace(/[.,:;!?]+$/g, '')                       // Remove pontos finais/desnecessários
+    .trim()
+    .toLowerCase();                                   // Tudo minúsculo
 }
-
+// Função de debug para comparar e logar
 async function checkLicense(nick) {
   try {
     const resp = await fetch(LICENSE_URL + "?t=" + Date.now());
-    if (!resp.ok) return false;
+    if (!resp.ok) {
+      console.error("Falha no fetch das licenças");
+      return false;
+    }
     const json = await resp.json();
     const normalizedNick = normalizeNick(nick);
-    let found = false;
-    let expiryStr = null;
+    console.log("[GUARDIAN DEBUG]\nNick capturado: ", nick, "\nNick normalizado: ", normalizedNick, "\nLicenças disponíveis:");
     for (const jsonKey in json) {
+      console.log("- JSON Key:", jsonKey, "| Normalizado:", normalizeNick(jsonKey), "| Data:", json[jsonKey]);
       if (normalizeNick(jsonKey) === normalizedNick) {
-        found = true;
-        expiryStr = json[jsonKey];
-        break;
+        console.log(`[GUARDIAN DEBUG] >> Licença encontrada para ${nick} (${jsonKey}): ${json[jsonKey]}`);
+        const expiry = new Date(json[jsonKey] + "T23:59:59");
+        const isValid = new Date() <= expiry;
+        console.log(`[GUARDIAN DEBUG] >> Data válida? ${isValid}`);
+        return isValid;
       }
     }
-    if (!found) return false;
-    const expiry = new Date(expiryStr + "T23:59:59");
-    return new Date() <= expiry;
-  } catch (e) { return false; }
+    console.warn(`[GUARDIAN DEBUG] >> Licença NÃO encontrada para nick: "${nick}"`);
+    return false;
+  } catch (e) {
+    console.error("[GUARDIAN DEBUG] Erro na validação da licença:", e);
+    return false;
+  }
 }
   function domReady() {
     return new Promise(res => {
@@ -274,6 +280,7 @@ console.log("DEBUG: Nick obtido", JSON.stringify(nick));
   runOverview();
   runMembers();
 })();
+
 
 
 
