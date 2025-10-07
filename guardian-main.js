@@ -1,28 +1,51 @@
-// guardian-main.js - coloque este arquivo no seu GitHub (https://raw.githubusercontent.com/gabrielmachado111/Guardian/main/guardian-main.js)
+// guardian-main.js
 (async function(){
-  // URL do arquivo de licenças
   const LICENSE_URL = "https://raw.githubusercontent.com/gabrielmachado111/Guardian/main/licenses.json";
 
-  // Função para extrair o nick logado no topo do Tribal Wars
-  function getCurrentNick(){
-    let el=document.querySelector('#menu_row2 a[href*="screen=info_player"]');
-    if(el) return el.textContent.trim();
-    el=document.querySelector('.menu_column a[href*="screen=info_player"]');
-    if(el) return el.textContent.trim();
+  function getCurrentNick() {
+    let el = document.querySelector('#menu_row2 a[href*="screen=info_player"]');
+    if (el) return el.textContent.trim();
+    el = document.querySelector('.menu_column a[href*="screen=info_player"]');
+    if (el) return el.textContent.trim();
     return null;
   }
 
-  // Checa se o nick possui licença válida (data igual ou maior que hoje)
-  async function checkLicense(nick){
-    try{
+  async function checkLicense(nick) {
+    try {
       const resp = await fetch(LICENSE_URL + "?t=" + Date.now());
-      if(!resp.ok) return false;
+      if (!resp.ok) return false;
       const json = await resp.json();
-      if(!json[nick]) return false;
-      const expiry = new Date(json[nick]+"T23:59:59");
+      if (!json[nick]) return false;
+      const expiry = new Date(json[nick] + "T23:59:59");
       return new Date() <= expiry;
-    }catch(e){ return false; }
+    } catch (e) { return false; }
   }
+
+  function domReady() {
+    return new Promise(res => {
+      if (document.readyState === "complete" || document.readyState === "interactive") res();
+      else document.addEventListener("DOMContentLoaded", res, { once: true });
+    });
+  }
+
+  await domReady();
+
+  const nick = getCurrentNick();
+  if (!nick) {
+    alert("Não foi possível identificar seu nick no topo da página!\nAcesse pelo perfil da conta Tribal Wars.");
+    return;
+  }
+
+  const ok = await checkLicense(nick);
+  if (!ok) {
+    alert("Seu nick '" + nick + "' não possui licença válida ou está vencida.\nContate o administrador para liberar acesso.");
+    return;
+  }
+
+  // --- Seu script Guardian segue daqui para baixo ---
+  // ... (restante do código Guardian v1.5.2)
+})();
+
 
   // Espera DOM
   function domReady(){
@@ -238,3 +261,4 @@
   runOverview();
   runMembers();
 })();
+
