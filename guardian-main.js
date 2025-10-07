@@ -1,38 +1,69 @@
 // guardian-main.js
 (async function(){
-  const LICENSE_URL = "https://raw.githubusercontent.com/gabrielmachado111/Guardian/main/licenses.json";
+ const LICENSE_URL = "https://raw.githubusercontent.com/gabrielmachado111/Guardian/main/licenses.json";
 
-function normalizeNick(nick) {
-  return nick
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remove acentos
-    .replace(/[\u200B-\u200D\uFEFF]/g, "")            // Remove chars invisíveis
-    .replace(/\s+/g, ' ')                             // Espaços múltiplos para um só
-    .replace(/[.,:;!?]+$/g, '')                       // Remove pontos finais/desnecessários
-    .trim()
-    .toLowerCase();                                   // Tudo minúsculo
+// Função para pegar o nick do Tribal Wars
+function getCurrentNick() {
+  let el = document.querySelector('#menu_row2 a[href*="screen=info_player"]');
+  if (el) return el.textContent.trim();
+  el = document.querySelector('.menu_column a[href*="screen=info_player"]');
+  if (el) return el.textContent.trim();
+  return null;
 }
-// Função de debug para comparar e logar
+
+// Função para checar licença no JSON (busca estrita, sem normalização)
 async function checkLicense(nick) {
   try {
     const resp = await fetch(LICENSE_URL + "?t=" + Date.now());
     if (!resp.ok) {
-      console.error("Falha no fetch das licenças");
+      alert("Erro ao acessar a lista de licenças.");
       return false;
     }
-for (const jsonKey in json) {
-    let nickNorm = normalizeNick(nick);
-    let keyNorm = normalizeNick(jsonKey);
-    console.log(`COMPARANDO [${keyNorm}] com [${nickNorm}]`);
-    if (keyNorm === nickNorm) {
-        //...
+    const json = await resp.json();
+    // Debug: log para garantir correspondência
+    console.log("[GUARDIAN] Nick no DOM:", "[" + nick + "]", "length:", nick.length);
+    for (const jsonKey in json) {
+      console.log("[GUARDIAN] JSON Key:", "[" + jsonKey + "]", "length:", jsonKey.length);
+      if (jsonKey === nick) {
+        console.log("[GUARDIAN] Match! Licença:", json[jsonKey]);
+        const expiry = new Date(json[jsonKey] + "T23:59:59");
+        return new Date() <= expiry;
+      }
     }
-    console.warn(`[GUARDIAN DEBUG] >> Licença NÃO encontrada para nick: "${nick}"`);
+    console.warn("[GUARDIAN] Licença NÃO encontrada para nick:", "[" + nick + "]");
     return false;
   } catch (e) {
-    console.error("[GUARDIAN DEBUG] Erro na validação da licença:", e);
+    alert("Erro ao validar licença!");
+    console.error("[GUARDIAN] Erro:", e);
     return false;
   }
 }
+
+function domReady() {
+  return new Promise(res => {
+    if (document.readyState === "complete" || document.readyState === "interactive") res();
+    else document.addEventListener("DOMContentLoaded", res, { once: true });
+  });
+}
+
+(async function() {
+  await domReady();
+
+  const nick = getCurrentNick();
+  if (!nick) {
+    alert("Não foi possível identificar seu nick no topo da página!\nAcesse pelo perfil da conta Tribal Wars.");
+    return;
+  }
+
+  const ok = await checkLicense(nick);
+  if (!ok) {
+    alert("Seu nick '" + nick + "' não possui licença válida ou está vencida.\nContate o administrador para liberar acesso.");
+    return;
+  }
+
+  // ... RESTANTE DO SEU SCRIPT GUARDIAN ...
+})();
+
   function domReady() {
     return new Promise(res => {
       if (document.readyState === "complete" || document.readyState === "interactive") res();
@@ -274,6 +305,7 @@ console.log("DEBUG: Nick obtido", JSON.stringify(nick));
   runOverview();
   runMembers();
 })();
+
 
 
 
