@@ -2,25 +2,37 @@
 (async function(){
   const LICENSE_URL = "https://raw.githubusercontent.com/gabrielmachado111/Guardian/main/licenses.json";
 
-  function getCurrentNick() {
-    let el = document.querySelector('#menu_row2 a[href*="screen=info_player"]');
-    if (el) return el.textContent.trim();
-    el = document.querySelector('.menu_column a[href*="screen=info_player"]');
-    if (el) return el.textContent.trim();
-    return null;
-  }
+  // Função para normalizar nicks
+function normalizeNick(nick) {
+  return nick
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remove acentos
+          .replace(/[\u200B-\u200D\uFEFF]/g, "")            // Remove chars invisíveis
+          .replace(/\s+/g, ' ')                             // Espaços múltiplos para único
+          .replace(/[.,:;!?]+$/g, '')                       // Remove pontos finais/desnecessários
+          .trim()
+          .toLowerCase();                                   // Tudo minúsculo
+}
 
-  async function checkLicense(nick) {
-    try {
-      const resp = await fetch(LICENSE_URL + "?t=" + Date.now());
-      if (!resp.ok) return false;
-      const json = await resp.json();
-      if (!json[nick]) return false;
-      const expiry = new Date(json[nick] + "T23:59:59");
-      return new Date() <= expiry;
-    } catch (e) { return false; }
-  }
-
+async function checkLicense(nick) {
+  try {
+    const resp = await fetch(LICENSE_URL + "?t=" + Date.now());
+    if (!resp.ok) return false;
+    const json = await resp.json();
+    const normalizedNick = normalizeNick(nick);
+    let found = false;
+    let expiryStr = null;
+    for (const jsonKey in json) {
+      if (normalizeNick(jsonKey) === normalizedNick) {
+        found = true;
+        expiryStr = json[jsonKey];
+        break;
+      }
+    }
+    if (!found) return false;
+    const expiry = new Date(expiryStr + "T23:59:59");
+    return new Date() <= expiry;
+  } catch (e) { return false; }
+}
   function domReady() {
     return new Promise(res => {
       if (document.readyState === "complete" || document.readyState === "interactive") res();
@@ -262,5 +274,6 @@ console.log("DEBUG: Nick obtido", JSON.stringify(nick));
   runOverview();
   runMembers();
 })();
+
 
 
