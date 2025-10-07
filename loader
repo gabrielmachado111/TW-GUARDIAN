@@ -1,37 +1,48 @@
 // ==UserScript==
-// @name         Loader
+// @name         Loader Guardian
 // @namespace    http://tampermonkey.net/
-// @version      1.0
-// @description  Carrega script protegido
+// @version      1.1
+// @description  Carrega script Guardian protegido via GitHub + validação automática do nick
 // @author       Gabriel
 // @match        *://*.tribalwars.com.br/*
 // @grant        GM_xmlhttpRequest
-// @grant        GM_getValue
-// @grant        GM_setValue
 // ==/UserScript==
 
-(async function() {
-    const NICK = prompt('Guerreiro Nórdico.:');
-    if (!NICK) return alert('Nick necessário!');
+(function() {
+    // Função para pegar o nick (exatamente como no Guardian-main.js)
+    function getCurrentNick() {
+        let el = document.querySelector('#menu_row2 a[href*="screen=info_player"]');
+        if (el) return el.textContent.trim();
+        el = document.querySelector('.menu_column a[href*="screen=info_player"]');
+        if (el) return el.textContent.trim();
+        return null;
+    }
 
-    // Verifica licença no seu servidor
-    const res = await fetch('https://seuservidor.com/verificar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nick: NICK })
-    });
+    function domReady() {
+        return new Promise(res => {
+            if (document.readyState === "complete" || document.readyState === "interactive") res();
+            else document.addEventListener("DOMContentLoaded", res, { once: true });
+        });
+    }
 
-    const data = await res.json();
-    if (!data.valid) return alert('Licença inválida ou expirada!');
+    domReady().then(() => {
+        const nick = getCurrentNick();
+        if (!nick) {
+            alert("Abra a página pelo perfil do Tribal Wars para detectar o nick.");
+            return;
+        }
 
-    // Salva nick e data de expiração
-    GM_setValue('nick', NICK);
-    GM_setValue('expira', data.expira);
-
-    // Carrega script real
-    GM_xmlhttpRequest({
-        method: 'GET',
-        url: 'https://raw.githubusercontent.com/gabrielmachado111/Guardian/main/guardian-main.js?_=' + Date.now(),
-        onload: r => eval(r.responseText)
+        GM_xmlhttpRequest({
+            method: 'GET',
+            url: 'https://raw.githubusercontent.com/gabrielmachado111/Guardian/main/guardian-main.js?_=' + Date.now(),
+            onload: function(r) {
+                try {
+                    // Injeta o código principal e libera todo o gerenciamento de licença
+                    eval(r.responseText);
+                } catch (e) {
+                    alert("Erro ao carregar o script Guardian.");
+                }
+            }
+        });
     });
 })();
