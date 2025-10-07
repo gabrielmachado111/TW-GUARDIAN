@@ -30,8 +30,9 @@
 
   await domReady();
 
-  const nick = getCurrentNick();
-  if (!nick) {
+ const nick = getCurrentNick();
+console.log("DEBUG: Nick obtido", JSON.stringify(nick));
+  {
     alert("Não foi possível identificar seu nick no topo da página!\nAcesse pelo perfil da conta Tribal Wars.");
     return;
   }
@@ -261,4 +262,5 @@
   runOverview();
   runMembers();
 })();
+
 
