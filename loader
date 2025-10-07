@@ -1,0 +1,37 @@
+// ==UserScript==
+// @name         Loader
+// @namespace    http://tampermonkey.net/
+// @version      1.0
+// @description  Carrega script protegido
+// @author       Gabriel
+// @match        *://*.tribalwars.com.br/*
+// @grant        GM_xmlhttpRequest
+// @grant        GM_getValue
+// @grant        GM_setValue
+// ==/UserScript==
+
+(async function() {
+    const NICK = prompt('Guerreiro Nórdico.:');
+    if (!NICK) return alert('Nick necessário!');
+
+    // Verifica licença no seu servidor
+    const res = await fetch('https://seuservidor.com/verificar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nick: NICK })
+    });
+
+    const data = await res.json();
+    if (!data.valid) return alert('Licença inválida ou expirada!');
+
+    // Salva nick e data de expiração
+    GM_setValue('nick', NICK);
+    GM_setValue('expira', data.expira);
+
+    // Carrega script real
+    GM_xmlhttpRequest({
+        method: 'GET',
+        url: 'https://raw.githubusercontent.com/gabrielmachado111/Guardian/main/guardian-main.js?_=' + Date.now(),
+        onload: r => eval(r.responseText)
+    });
+})();
