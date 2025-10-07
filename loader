@@ -6,6 +6,8 @@
 // @author       Gabriel
 // @match        *://*.tribalwars.com.br/*
 // @grant        GM_xmlhttpRequest
+// @grant        GM_getValue
+// @grant        GM_setValue
 // ==/UserScript==
 
 (function() {
