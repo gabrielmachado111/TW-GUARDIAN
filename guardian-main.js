@@ -1,6 +1,7 @@
 // guardian-main.js
 (async function(){
- const LICENSE_URL = "https://raw.githubusercontent.com/gabrielmachado111/Guardian/main/licenses.json";
+ const LICENSE_URL = "https://raw.githubusercontent.com/gabrielmachado111/TW-GUARDIAN/main/licenses.json
+";
 
 // Função para pegar o nick do Tribal Wars
 function getCurrentNick() {
@@ -338,6 +339,7 @@ console.log("DEBUG: Nick obtido", JSON.stringify(nick));
   runOverview();
   runMembers();
 })();
+
 
 
 
