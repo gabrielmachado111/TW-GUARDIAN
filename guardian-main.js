@@ -124,8 +124,6 @@ console.log("DEBUG: Nick obtido", JSON.stringify(nick));
     return;
   }
 
-  // --- Seu script Guardian segue daqui para baixo ---
-  // ... (restante do código Guardian v1.5.2)
 })();
 
 
@@ -151,9 +149,6 @@ console.log("DEBUG: Nick obtido", JSON.stringify(nick));
     alert("Seu nick '" + nick + "' não possui licença válida ou está vencida.\nContate o administrador para liberar acesso.");
     return;
   }
-
-  // === TODO O SEU SCRIPT GUARDIAN VAI DAQUI PARA BAIXO ===
-  // --- segue o script v1.5.2 com interface arrastável, exatamente como fornecido antes ---
 
   // ---------- Config ----------
   const POLL_MS=2000, GAP_SECONDS=30, RECENT_WINDOW_SECONDS=60, MAX_LOOKBACK_ROWS=80, RETRIGGER_COOLDOWN_MS=30000;
@@ -343,6 +338,7 @@ console.log("DEBUG: Nick obtido", JSON.stringify(nick));
   runOverview();
   runMembers();
 })();
+
 
 
 
