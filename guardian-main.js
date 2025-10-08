@@ -25,28 +25,37 @@ function getCurrentNick() {
 async function checkLicense(nick) {
     try {
         const resp = await fetch(LICENSE_URL + "?t=" + Date.now());
-        if (!resp.ok) return false;
+        if (!resp.ok) {
+            alert("Erro ao acessar licenses.json!");
+            return false;
+        }
         const json = await resp.json();
-        const normalizedNick = normalizeNick(nick);
+        console.log("[DEBUG] JSON obtido:", json);
+        console.log("[DEBUG] NICK pedido:", nick);
 
         for (const jsonKey in json) {
-            if (normalizeNick(jsonKey) === normalizedNick) {
-                const expiryStr = json[jsonKey].trim();           // REMOVE ESPAÇOS EXTRAS
-                // Divide a data em partes
+            console.log("[DEBUG] Comparando: ", jsonKey, nick, jsonKey === nick);
+            if (jsonKey === nick) {
+                const expiryStr = (json[jsonKey]||"").trim();
                 const [yyyy, mm, dd] = expiryStr.split('-').map(Number);
-                // Garante data para o fim do dia
-                const expiry = new Date(yyyy, mm - 1, dd, 23, 59, 59);
-                // Debug:
-                console.log("Nick:", nick, "Vencimento lido:", expiryStr, "Interpretado JS:", expiry, "Hoje:", new Date());
+                const expiry = new Date(yyyy, mm-1, dd, 23, 59, 59);
+                console.log("[DEBUG] Data lida:", expiryStr, "| Interpretação:", expiry);
+                console.log("[DEBUG] Agora é:", new Date());
+                if (!yyyy || !mm || !dd || isNaN(expiry.getTime())) {
+                    alert("Data de licença inválida para o nick '" + nick + "' ("+expiryStr+")");
+                    return false;
+                }
                 return new Date() <= expiry;
             }
         }
+        alert("Nick '" + nick + "' não encontrado em licenses.json");
         return false;
     } catch (e) { 
-        console.error("Erro validação licença:", e);
+        alert("Erro ao validar licença: " + e);
         return false; 
     }
 }
+
 
  const json = await resp.json();
     // Debug: log para garantir correspondência
@@ -334,6 +343,7 @@ console.log("DEBUG: Nick obtido", JSON.stringify(nick));
   runOverview();
   runMembers();
 })();
+
 
 
 
