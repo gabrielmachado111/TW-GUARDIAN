@@ -1,91 +1,76 @@
 // guardian-main.js
 (async function(){
- const LICENSE_URL = "https://raw.githubusercontent.com/gabrielmachado111/TW-GUARDIAN/main/licenses.json
-";
+  const LICENSE_URL = "https://raw.githubusercontent.com/gabrielmachado111/TW-GUARDIAN/main/licenses.json";
 
-// Função para pegar o nick do Tribal Wars
-function getCurrentNick() {
-  let el = document.querySelector('#menu_row2 a[href*="screen=info_player"]');
-  if (el) return el.textContent.trim();
-  el = document.querySelector('.menu_column a[href*="screen=info_player"]');
-  if (el) return el.textContent.trim();
-  return null;
-}
- 
- function normalizeNick(nick) {
-    return nick
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')     // Remove acentos
-        .replace(/[\u200B-\u200D\uFEFF]/g, "")                // Remove chars invisíveis
-        .replace(/[\u2013\u2014]/g, '-')                      // Troca traço longo por curto
-        .replace(/-/g, '-')                                   // Uniformiza hífen
-        .replace(/\s+/g, ' ')                                 // Reduz múltiplos espaços para um só
-        .trim()
-        .toLowerCase();                                       // Tudo minúsculo
-}
-
-async function checkLicense(nick) {
-    try {
-        const resp = await fetch(LICENSE_URL + "?t=" + Date.now());
-        if (!resp.ok) {
-            alert("Erro ao acessar licenses.json!");
-            return false;
-        }
-        const json = await resp.json();
-        console.log("[DEBUG] JSON obtido:", json);
-        console.log("[DEBUG] NICK pedido:", nick);
-
-        for (const jsonKey in json) {
-            console.log("[DEBUG] Comparando: ", jsonKey, nick, jsonKey === nick);
-            if (jsonKey === nick) {
-                const expiryStr = (json[jsonKey]||"").trim();
-                const [yyyy, mm, dd] = expiryStr.split('-').map(Number);
-                const expiry = new Date(yyyy, mm-1, dd, 23, 59, 59);
-                console.log("[DEBUG] Data lida:", expiryStr, "| Interpretação:", expiry);
-                console.log("[DEBUG] Agora é:", new Date());
-                if (!yyyy || !mm || !dd || isNaN(expiry.getTime())) {
-                    alert("Data de licença inválida para o nick '" + nick + "' ("+expiryStr+")");
-                    return false;
-                }
-                return new Date() <= expiry;
-            }
-        }
-        alert("Nick '" + nick + "' não encontrado em licenses.json");
-        return false;
-    } catch (e) { 
-        alert("Erro ao validar licença: " + e);
-        return false; 
-    }
-}
-
-
- const json = await resp.json();
-    // Debug: log para garantir correspondência
-    console.log("[GUARDIAN] Nick no DOM:", "[" + nick + "]", "length:", nick.length);
-    for (const jsonKey in json) {
-      console.log("[GUARDIAN] JSON Key:", "[" + jsonKey + "]", "length:", jsonKey.length);
-      if (jsonKey === nick) {
-        console.log("[GUARDIAN] Match! Licença:", json[jsonKey]);
-        const expiry = new Date(json[jsonKey] + "T23:59:59");
-        return new Date() <= expiry;
-      }
-    }
-    console.warn("[GUARDIAN] Licença NÃO encontrada para nick:", "[" + nick + "]");
-    return false;
-  } catch (e) {
-    alert("Erro ao validar licença!");
-    console.error("[GUARDIAN] Erro:", e);
-    return false;
+  // Função para pegar o nick do Tribal Wars
+  function getCurrentNick() {
+    let el = document.querySelector('#menu_row2 a[href*="screen=info_player"]');
+    if (el) return el.textContent.trim();
+    el = document.querySelector('.menu_column a[href*="screen=info_player"]');
+    if (el) return el.textContent.trim();
+    return null;
   }
-}
 
-function domReady() {
-  return new Promise(res => {
-    if (document.readyState === "complete" || document.readyState === "interactive") res();
-    else document.addEventListener("DOMContentLoaded", res, { once: true });
-  });
-}
+  // Normaliza nick para permitir comparação consistente
+  function normalizeNick(nick) {
+      return nick
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')     // Remove acentos
+          .replace(/[\u200B-\u200D\uFEFF]/g, "")                // Remove chars invisíveis
+          .replace(/[\u2013\u2014]/g, '-')                      // Troca traço longo por curto
+          .replace(/-/g, '-')                                   // Uniformiza hífen
+          .replace(/\s+/g, ' ')                                 // Reduz múltiplos espaços para um só
+          .trim()
+          .toLowerCase();                                       // Tudo minúsculo
+  }
 
-(async function() {
+  // Busca JSON via GM_xmlhttpRequest para compatibilidade total
+  function getJsonViaGM(url) {
+    return new Promise((resolve, reject) => {
+      GM_xmlhttpRequest({
+        method: 'GET',
+        url: url + "?t=" + Date.now(),
+        onload: function (r) {
+          try { resolve(JSON.parse(r.responseText)); }
+          catch (e) { reject(e); }
+        },
+        onerror: reject
+      });
+    });
+  }
+
+  // Verifica licença considerando nick e data
+  async function checkLicense(nick) {
+    try {
+      const json = await getJsonViaGM(LICENSE_URL);
+      const normalizedNick = normalizeNick(nick);
+      for (const jsonKey in json) {
+        if (normalizeNick(jsonKey) === normalizedNick) {
+          const expiryStr = json[jsonKey].trim();
+          const [yyyy, mm, dd] = expiryStr.split('-').map(Number);
+          const expiry = new Date(yyyy, mm-1, dd, 23, 59, 59);
+          if (!yyyy || !mm || !dd || isNaN(expiry.getTime())) {
+            alert(`Data de licença inválida para o nick '${nick}' (${expiryStr})`);
+            return false;
+          }
+          return new Date() <= expiry;
+        }
+      }
+      alert(`Nick '${nick}' não encontrado em licenses.json`);
+      return false;
+    } catch (e) {
+      alert("Erro ao validar licença: " + e);
+      return false;
+    }
+  }
+
+  // Espera DOM pronto
+  function domReady() {
+    return new Promise(res => {
+      if (document.readyState === "complete" || document.readyState === "interactive") res();
+      else document.addEventListener("DOMContentLoaded", res, { once: true });
+    });
+  }
+
   await domReady();
 
   const nick = getCurrentNick();
@@ -100,70 +85,21 @@ function domReady() {
     return;
   }
 
-  // ... RESTANTE DO SEU SCRIPT GUARDIAN ...
-})();
+  // ---------- Seu script Guardian original começa aqui ----------
 
-  function domReady() {
-    return new Promise(res => {
-      if (document.readyState === "complete" || document.readyState === "interactive") res();
-      else document.addEventListener("DOMContentLoaded", res, { once: true });
-    });
-  }
-
-  await domReady();
-
- const nick = getCurrentNick();
-console.log("DEBUG: Nick obtido", JSON.stringify(nick));
-  {
-    alert("Não foi possível identificar seu nick no topo da página!\nAcesse pelo perfil da conta Tribal Wars.");
-    return;
-  }
-
-  const ok = await checkLicense(nick);
-  if (!ok) {
-    alert("Seu nick '" + nick + "' não possui licença válida ou está vencida.\nContate o administrador para liberar acesso.");
-    return;
-  }
-
-})();
-
-
-  // Espera DOM
-  function domReady(){
-    return new Promise(res=>{
-      if(document.readyState==="complete"||document.readyState==="interactive") res();
-      else document.addEventListener("DOMContentLoaded",res,{once:true});
-    });
-  }
-
-  await domReady();
-
-  const nick = getCurrentNick();
-  if(!nick){
-    alert("Não foi possível identificar seu nick no topo da página!\nAcesse pelo perfil da conta Tribal Wars.");
-    return;
-  }
-
-  // Verificação da licença
-  const ok = await checkLicense(nick);
-  if(!ok){
-    alert("Seu nick '" + nick + "' não possui licença válida ou está vencida.\nContate o administrador para liberar acesso.");
-    return;
-  }
-
-  // ---------- Config ----------
+  // --- Config ---
   const POLL_MS=2000, GAP_SECONDS=30, RECENT_WINDOW_SECONDS=60, MAX_LOOKBACK_ROWS=80, RETRIGGER_COOLDOWN_MS=30000;
 
-  // ---------- Keys ----------
+  // --- Keys ---
   const K_ENABLED='tw_guard_enabled', K_SUSPECT='tw_guard_suspect', K_SUSPECT_ID='tw_guard_suspect_id',
         K_ACTION_FLAG='tw_guard_action_flag', K_LAST_TRIGGER_TS='tw_guard_last_trigger',
         K_UI_POS='tw_guard_ui_pos';
 
-  // ---------- Context ----------
+  // --- Context ---
   const url=new URL(location.href), screen=url.searchParams.get('screen'), mode=url.searchParams.get('mode'),
         village=url.searchParams.get('village')||'';
 
-  // ---------- Utils ----------
+  // --- Utils ---
   function enabled(){ return GM_getValue(K_ENABLED,true); }
   function setEnabled(v){ GM_setValue(K_ENABLED,!!v); updateUi(); }
   function nowTs(){ return Date.now(); }
@@ -184,7 +120,7 @@ console.log("DEBUG: Nick obtido", JSON.stringify(nick));
     return { ts, victim:m[1].replace(/\s*\.$/,'').trim(), author:m[2].replace(/\s*\.$/,'').trim() };
   }
 
-  // ---------- UI (arrastável) ----------
+  // --- UI (dragável) ---
   let uiRoot=null, statusSpan=null, toggleBtn=null;
   function ensureUi(){
     if (uiRoot && document.body.contains(uiRoot)) return;
@@ -194,7 +130,7 @@ console.log("DEBUG: Nick obtido", JSON.stringify(nick));
     uiRoot.id='tw-guard-ui';
     uiRoot.style.cssText='position:fixed;right:16px;bottom:16px;z-index:2147483647;background:#101010;color:#eee;border:1px solid #444;border-radius:8px;min-width:220px;box-shadow:0 2px 8px rgba(0,0,0,.4);font:12px Arial';
 
-    // header (área de arraste)
+    // header (área de drag)
     const header=document.createElement('div');
     header.textContent='Tribe Guard v1.5.2';
     header.style.cssText='cursor:move;font-weight:bold;padding:8px 12px;border-bottom:1px solid #333;background:#181818;border-top-left-radius:8px;border-top-right-radius:8px;';
@@ -211,7 +147,7 @@ console.log("DEBUG: Nick obtido", JSON.stringify(nick));
     uiRoot.append(header, body);
     document.body.appendChild(uiRoot);
 
-    // posição persistida
+    // posicão salva
     const pos = GM_getValue(K_UI_POS, null);
     if (pos && typeof pos==='object') {
       if (pos.left!=null && pos.top!=null) {
@@ -260,7 +196,7 @@ console.log("DEBUG: Nick obtido", JSON.stringify(nick));
     toggleBtn.style.background=on?'#d9534f':'#5cb85c';
   }
 
-  // Recria UI ao navegar via Ajax
+  // Recria UI no overview da tribo
   function mountUiOnOverview(){
     const isOverview = (screen==='ally'&&mode==='overview');
     if(!isOverview) return;
@@ -272,7 +208,7 @@ console.log("DEBUG: Nick obtido", JSON.stringify(nick));
     mo.observe(root,{childList:true,subtree:true});
   }
 
-  // ---------- Overview detector ----------
+  // Overview detector
   function runOverview(){
     if(!(screen==='ally'&&mode==='overview')) return;
     function trigger(author){
@@ -305,7 +241,7 @@ console.log("DEBUG: Nick obtido", JSON.stringify(nick));
     mo.observe(target,{childList:true,subtree:true});
   }
 
-  // ---------- Members executor ----------
+  // Membros executor
   function runMembers(){
     if(!(screen==='ally'&&mode==='members')) return;
     const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -339,15 +275,3 @@ console.log("DEBUG: Nick obtido", JSON.stringify(nick));
   runOverview();
   runMembers();
 })();
-
-
-
-
-
-
-
-
-
-
-
-
