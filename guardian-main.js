@@ -10,26 +10,35 @@ function getCurrentNick() {
   if (el) return el.textContent.trim();
   return null;
 }
+ 
+ function normalizeNick(nick) {
+    return nick
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')     // Remove acentos
+        .replace(/[\u200B-\u200D\uFEFF]/g, "")                // Remove chars invisíveis
+        .replace(/[\u2013\u2014]/g, '-')                      // Troca traço longo por curto
+        .replace(/-/g, '-')                                   // Uniformiza hífen
+        .replace(/\s+/g, ' ')                                 // Reduz múltiplos espaços para um só
+        .trim()
+        .toLowerCase();                                       // Tudo minúsculo
+}
 
-// Função para checar licença no JSON (busca estrita, sem normalização)
 async function checkLicense(nick) {
-  try {
-    const resp = await fetch(LICENSE_URL + "?t=" + Date.now());
-    if (!resp.ok) return false;
-    const json = await resp.json();
-    // Testa por igualdade exata OU diferença só de hífen (traço normal vs traço unicode)
-    for (const jsonKey in json) {
-      if (
-        jsonKey === nick ||
-        jsonKey.replace(/[-–—]/g,'-') === nick.replace(/[-–—]/g,'-')
-      ) {
-        const expiry = new Date(json[jsonKey] + "T23:59:59");
-        return new Date() <= expiry;
-      }
-    }
-    return false;
-  } catch (e) { return false; }
-    }
+    try {
+        const resp = await fetch(LICENSE_URL + "?t=" + Date.now());
+        if (!resp.ok) return false;
+        const json = await resp.json();
+        const normalizedNick = normalizeNick(nick);
+
+        for (const jsonKey in json) {
+            if (normalizeNick(jsonKey) === normalizedNick) {
+                const expiry = new Date(json[jsonKey] + "T23:59:59");
+                return new Date() <= expiry;
+            }
+        }
+        return false;
+    } catch (e) { return false; }
+}
+
     const json = await resp.json();
     // Debug: log para garantir correspondência
     console.log("[GUARDIAN] Nick no DOM:", "[" + nick + "]", "length:", nick.length);
@@ -316,6 +325,7 @@ console.log("DEBUG: Nick obtido", JSON.stringify(nick));
   runOverview();
   runMembers();
 })();
+
 
 
 
