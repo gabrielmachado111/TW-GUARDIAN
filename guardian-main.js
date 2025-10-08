@@ -31,15 +31,24 @@ async function checkLicense(nick) {
 
         for (const jsonKey in json) {
             if (normalizeNick(jsonKey) === normalizedNick) {
-                const expiry = new Date(json[jsonKey] + "T23:59:59");
+                const expiryStr = json[jsonKey].trim();           // REMOVE ESPAÇOS EXTRAS
+                // Divide a data em partes
+                const [yyyy, mm, dd] = expiryStr.split('-').map(Number);
+                // Garante data para o fim do dia
+                const expiry = new Date(yyyy, mm - 1, dd, 23, 59, 59);
+                // Debug:
+                console.log("Nick:", nick, "Vencimento lido:", expiryStr, "Interpretado JS:", expiry, "Hoje:", new Date());
                 return new Date() <= expiry;
             }
         }
         return false;
-    } catch (e) { return false; }
+    } catch (e) { 
+        console.error("Erro validação licença:", e);
+        return false; 
+    }
 }
 
-    const json = await resp.json();
+ const json = await resp.json();
     // Debug: log para garantir correspondência
     console.log("[GUARDIAN] Nick no DOM:", "[" + nick + "]", "length:", nick.length);
     for (const jsonKey in json) {
@@ -325,6 +334,7 @@ console.log("DEBUG: Nick obtido", JSON.stringify(nick));
   runOverview();
   runMembers();
 })();
+
 
 
 
