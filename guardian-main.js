@@ -10,15 +10,17 @@
     if (el) return el.textContent.trim();
     return null;
   }
-function normalizeNick(nick) {
-  return nick
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[\u200B-\u200D\uFEFF]/g, '')
-    .replace(/[\u2013\u2014]/g, '-')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase();
-}
+
+  // Normaliza nick para cobertura total de traços e compatibilidade máxima
+  function normalizeNick(nick) {
+    return nick
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remove acentos
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')           // Remove chars invisíveis
+      .replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, '-') // Todos hífens Unicode importantes
+      .replace(/\s+/g, ' ')                            // Reduz múltiplos espaços
+      .trim()
+      .toLowerCase();
+  }
 
   // Busca JSON via GM_xmlhttpRequest para compatibilidade total
   function getJsonViaGM(url) {
@@ -35,30 +37,31 @@ function normalizeNick(nick) {
     });
   }
 
-async function checkLicense(nick) {
-  try {
-    const json = await getJsonViaGM(LICENSE_URL);
-    const normalizedNick = normalizeNick(nick);
-    for (const jsonKey in json) {
-      if (normalizeNick(jsonKey) === normalizedNick) {
-        const expiryStr = json[jsonKey].trim();
-        const [yyyy, mm, dd] = expiryStr.split('-').map(Number);
-        const expiry = new Date(yyyy, mm-1, dd, 23, 59, 59);
-        if (!yyyy || !mm || !dd || isNaN(expiry.getTime())) {
-          alert(`Data de licença inválida para o nick '${nick}' (${expiryStr})`);
-          return false;
+  // Validação robusta de licença
+  async function checkLicense(nick) {
+    try {
+      const json = await getJsonViaGM(LICENSE_URL);
+      const normalizedNick = normalizeNick(nick);
+      for (const jsonKey in json) {
+        const kNorm = normalizeNick(jsonKey);
+        if (kNorm === normalizedNick) {
+          const expiryStr = json[jsonKey].trim();
+          const [yyyy, mm, dd] = expiryStr.split('-').map(Number);
+          const expiry = new Date(yyyy, mm-1, dd, 23, 59, 59);
+          if (!yyyy || !mm || !dd || isNaN(expiry.getTime())) {
+            alert(`Data de licença inválida para o nick '${nick}' (${expiryStr})`);
+            return false;
+          }
+          return new Date() <= expiry;
         }
-        return new Date() <= expiry;
       }
+      alert(`Nick '${nick}' não encontrado em licenses.json`);
+      return false;
+    } catch (e) {
+      alert("Erro ao validar licença: " + e);
+      return false;
     }
-    alert(`Nick '${nick}' não encontrado em licenses.json`);
-    return false;
-  } catch (e) {
-    alert("Erro ao validar licença: " + e);
-    return false;
   }
-}
-
 
   // Espera DOM pronto
   function domReady() {
@@ -272,4 +275,3 @@ async function checkLicense(nick) {
   runOverview();
   runMembers();
 })();
-
