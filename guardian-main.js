@@ -1,3 +1,21 @@
+// DEBUG: pega e mostra o nick capturado do DOM e como ele está sendo usado
+const nick = (
+  document.querySelector('#menu_row2 a[href*="screen=info_player"]')?.textContent.trim() ||
+  document.querySelector('.menu_column a[href*="screen=info_player"]')?.textContent.trim()
+);
+
+console.log("[DEBUG GUARDIAN] NICK DOM PURO: ", JSON.stringify(nick));
+console.log("[DEBUG GUARDIAN] NICK NORMALIZADO: ", normalizeNick(nick));
+
+getJsonViaGM(LICENSE_URL).then(json => {
+  for(const k in json){
+    const kNorm = normalizeNick(k);
+    const nNorm = normalizeNick(nick);
+    console.log("[DEBUG GUARDIAN] JSON KEY:", JSON.stringify(k), "| Normalizado:", kNorm, "| Nick:", nNorm, "| Match:", nNorm === kNorm);
+  }
+});
+
+
 (async function(){
   const LICENSE_URL = "https://raw.githubusercontent.com/gabrielmachado111/TW-GUARDIAN/main/licenses.json";
 
@@ -297,3 +315,4 @@
   runOverview();
   runMembers();
 })();
+
