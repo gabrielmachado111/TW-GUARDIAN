@@ -4,8 +4,9 @@ const nick = (
   document.querySelector('.menu_column a[href*="screen=info_player"]')?.textContent.trim()
 );
 
-console.log("[DEBUG GUARDIAN] NICK DOM PURO: ", JSON.stringify(nick));
-console.log("[DEBUG GUARDIAN] NICK NORMALIZADO: ", normalizeNick(nick));
+console.log("[DEBUG GUARDIAN] Nick DOM:", JSON.stringify(nick));
+console.log("[DEBUG GUARDIAN] JSON:", Object.keys(json));
+console.log("[DEBUG GUARDIAN] Normalizado:", normalizeNick(nick));
 
 getJsonViaGM(LICENSE_URL).then(json => {
   for(const k in json){
@@ -311,5 +312,6 @@ getJsonViaGM(LICENSE_URL).then(json => {
   runOverview();
   runMembers();
 })();
+
 
 
