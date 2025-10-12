@@ -20,15 +20,11 @@ getJsonViaGM(LICENSE_URL).then(json => {
   const LICENSE_URL = "https://raw.githubusercontent.com/gabrielmachado111/TW-GUARDIAN/main/licenses.json";
 
   // Normaliza nick para comparação robusta
-  function normalizeNick(nick) {
-    return nick
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')  // Remove acentos
-      .replace(/[\u200B-\u200D\uFEFF]/g, '')            // Remove chars invisíveis
-      .replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, '-')  // Troca todos os hífens Unicode por padrão
-      .replace(/\s+/g, ' ')                             // Reduz espaços múltiplos
-      .trim()
-      .toLowerCase();
+  for (const jsonKey in json) {
+  if (normalizeNick(jsonKey) === normalizeNick(nick)) {
+    // Libera
   }
+}
 
   // Pega nick do DOM ao carregar
   function getCurrentNick() {
@@ -315,4 +311,5 @@ getJsonViaGM(LICENSE_URL).then(json => {
   runOverview();
   runMembers();
 })();
+
 
