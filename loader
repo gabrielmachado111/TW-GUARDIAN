@@ -2,7 +2,7 @@
 // @name         Loader Guardian
 // @namespace    http://tampermonkey.net/
 // @version      1.2
-// @description  Carrega script Guardian remoto + validação automática do nick (repositório TW-GUARDIAN!)
+// @description  Loader seguro para script Guardian remoto (TW-GUARDIAN repo)
 // @author       Gabriel
 // @match        *://*.tribalwars.com.br/*
 // @grant        GM_xmlhttpRequest
@@ -23,7 +23,7 @@
             url: 'https://raw.githubusercontent.com/gabrielmachado111/TW-GUARDIAN/main/guardian-main.js?_=' + Date.now(),
             onload: function(r) {
                 try {
-                    eval(r.responseText); // Roda todo o Guardian isolado
+                    eval(r.responseText);
                 } catch (e) {
                     alert("Erro ao carregar o script Guardian.");
                     console.error(e);
