@@ -20,43 +20,11 @@ getJsonViaGM(LICENSE_URL).then(json => {
 (async function(){
   const LICENSE_URL = "https://raw.githubusercontent.com/gabrielmachado111/TW-GUARDIAN/main/licenses.json";
 
-  // Normaliza nick para comparação robusta
-async function checkLicense(nick) {
-    try {
-      const json = await getJsonViaGM(LICENSE_URL);
-      const normalizedNick = normalizeNick(nick);
-      
-console.log("[GUARDIAN DEBUG] Nick:", nick, "| Normalizado:", normalizeNick(nick), "| JSON:", Object.keys(json));
-for (const jsonKey in json) {
+  console.log("[GUARDIAN DEBUG] Nick:", nick, "| Normalizado:", normalizeNick(nick), "| JSON:", Object.keys(json));
+  for (const jsonKey in json) {
   const kNorm = normalizeNick(jsonKey);
   console.log("[GUARDIAN DEBUG] KEY:", jsonKey, "| Normalizado:", kNorm, "| Match:", normalizeNick(nick) === kNorm);
 }
-
-      console.log("[GUARDIAN DEBUG] Nick DOM:", JSON.stringify(nick), "| Normalizado:", normalizedNick);
-      console.log("[GUARDIAN DEBUG] JSON KEYS:", Object.keys(json));
-
-      for (const jsonKey in json) {
-        const kNorm = normalizeNick(jsonKey);
-        console.log("[GUARDIAN DEBUG] JSON KEY:", JSON.stringify(jsonKey), "| Normalizado:", kNorm, "| Match:", kNorm === normalizedNick);
-        if (kNorm === normalizedNick) {
-          const expiryStr = json[jsonKey].trim();
-          const [yyyy, mm, dd] = expiryStr.split('-').map(Number);
-          const expiry = new Date(yyyy, mm - 1, dd, 23, 59, 59);
-          if (!yyyy || !mm || !dd || isNaN(expiry.getTime())) {
-            alert(`Data de licença inválida para o nick '${nick}' (${expiryStr})`);
-            return false;
-          }
-          return new Date() <= expiry;
-        }
-      }
-      alert(`Nick '${nick}' não encontrado em licenses.json`);
-      return false;
-    } catch (e) {
-      alert("Erro ao validar licença: " + e);
-      return false;
-    }
-}
-
 
   // Pega nick do DOM ao carregar
   function getCurrentNick() {
@@ -343,6 +311,7 @@ for (const jsonKey in json) {
   runOverview();
   runMembers();
 })();
+
 
 
 
