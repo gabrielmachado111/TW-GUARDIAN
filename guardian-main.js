@@ -25,6 +25,12 @@ async function checkLicense(nick) {
     try {
       const json = await getJsonViaGM(LICENSE_URL);
       const normalizedNick = normalizeNick(nick);
+      
+console.log("[GUARDIAN DEBUG] Nick:", nick, "| Normalizado:", normalizeNick(nick), "| JSON:", Object.keys(json));
+for (const jsonKey in json) {
+  const kNorm = normalizeNick(jsonKey);
+  console.log("[GUARDIAN DEBUG] KEY:", jsonKey, "| Normalizado:", kNorm, "| Match:", normalizeNick(nick) === kNorm);
+}
 
       console.log("[GUARDIAN DEBUG] Nick DOM:", JSON.stringify(nick), "| Normalizado:", normalizedNick);
       console.log("[GUARDIAN DEBUG] JSON KEYS:", Object.keys(json));
@@ -337,6 +343,7 @@ async function checkLicense(nick) {
   runOverview();
   runMembers();
 })();
+
 
 
 
