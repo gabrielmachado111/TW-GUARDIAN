@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Loader Guardian
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.2
 // @description  Carrega script Guardian protegido via GitHub + validação automática do nick
 // @author       Gabriel
 // @match        *://*.tribalwars.com.br/*
@@ -11,7 +11,7 @@
 // ==/UserScript==
 
 (function() {
-    // Função para pegar o nick (exatamente como no Guardian-main.js)
+    // Função para pegar o nick (igual Guardian-main.js)
     function getCurrentNick() {
         let el = document.querySelector('#menu_row2 a[href*="screen=info_player"]');
         if (el) return el.textContent.trim();
@@ -34,15 +34,16 @@
             return;
         }
 
+        // Corrija aqui: TW-GUARDIAN (não Guardian!)
         GM_xmlhttpRequest({
             method: 'GET',
-            url: 'https://raw.githubusercontent.com/gabrielmachado111/Guardian/main/guardian-main.js?_=' + Date.now(),
+            url: 'https://raw.githubusercontent.com/gabrielmachado111/TW-GUARDIAN/main/guardian-main.js?_=' + Date.now(),
             onload: function(r) {
                 try {
-                    // Injeta o código principal e libera todo o gerenciamento de licença
                     eval(r.responseText);
                 } catch (e) {
                     alert("Erro ao carregar o script Guardian.");
+                    console.error(e);
                 }
             }
         });
