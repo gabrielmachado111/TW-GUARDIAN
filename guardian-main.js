@@ -1,7 +1,6 @@
 (async function(){
   const LICENSE_URL = "https://raw.githubusercontent.com/gabrielmachado111/TW-GUARDIAN/main/licenses.json";
 
-  // Função para normalizar nick
   function normalizeNick(nick) {
     return nick
       ?.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -12,7 +11,6 @@
       .toLowerCase();
   }
 
-  // Pega nick do DOM ao carregar
   function getCurrentNick() {
     let el = document.querySelector('#menu_row2 a[href*="screen=info_player"]');
     if (el) return el.textContent.trim();
@@ -21,7 +19,6 @@
     return null;
   }
 
-  // Busca JSON de licença usando GM_xmlhttpRequest
   function getJsonViaGM(url) {
     return new Promise((resolve, reject) => {
       GM_xmlhttpRequest({
@@ -39,7 +36,7 @@
     });
   }
 
-  // Validação da licença, DEBUG só aqui dentro!
+  // Validação de licença
   async function checkLicense(nick) {
     try {
       const json = await getJsonViaGM(LICENSE_URL);
@@ -67,7 +64,6 @@
     }
   }
 
-  // Aguarda DOM pronto
   function domReady() {
     return new Promise(resolve => {
       if (document.readyState === "complete" || document.readyState === "interactive") resolve();
@@ -89,10 +85,86 @@
     return;
   }
 
-  // ---------- Código Guardian Original ----------
+  // ------- UI Flutuante Guardian -------
+  // Toggle via localStorage, mas pode adaptar pra GM_getValue se preferir
+  const K_ENABLED = "tw_guard_enabled";
+  function enabled() { return localStorage.getItem(K_ENABLED) !== "false"; }
+  function setEnabled(v) { localStorage.setItem(K_ENABLED, v ? "true" : "false"); updateUi(); }
+  function nowTs() { return Date.now(); }
 
-  // ... aqui vá com o restante do código da interface, UI, triggers, autômatos, etc
+  // UI flutuante
+  let uiRoot = null, statusSpan = null, toggleBtn = null;
 
-  // Exemplo de placeholder:
-  console.log("Licença válida, carregando funcionalidades Guardian...");
+  function ensureUi() {
+    if (uiRoot && document.body.contains(uiRoot)) return;
+
+    uiRoot = document.createElement('div');
+    uiRoot.id = 'tw-guard-ui';
+    uiRoot.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:2147483647;background:#101010;color:#eee;border:1px solid #444;border-radius:8px;min-width:220px;box-shadow:0 2px 8px rgba(0,0,0,.4);font:12px Arial';
+
+    const header = document.createElement('div');
+    header.textContent = 'Tribe Guardian';
+    header.style.cssText = 'cursor:move;font-weight:bold;padding:8px 12px;border-bottom:1px solid #333;background:#181818;border-top-left-radius:8px;border-top-right-radius:8px;';
+
+    const body = document.createElement('div');
+    body.style.cssText = 'padding:10px 12px;';
+    statusSpan = document.createElement('div');
+    statusSpan.style.cssText = 'margin-bottom:8px;';
+    toggleBtn = document.createElement('button');
+    toggleBtn.style.cssText = 'padding:6px 10px;border:none;border-radius:5px;color:#fff;cursor:pointer;';
+    toggleBtn.onclick = () => setEnabled(!enabled());
+    const hint = document.createElement('div');
+    hint.textContent = 'Arraste pelo topo para mover.';
+    hint.style.cssText = 'margin-top:6px;color:#bbb;';
+
+    body.append(statusSpan, toggleBtn, hint);
+    uiRoot.append(header, body);
+    document.body.appendChild(uiRoot);
+
+    // Drag & position
+    let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+    header.addEventListener('mousedown', (e) => {
+      dragging = true;
+      startX = e.clientX; startY = e.clientY;
+      const rect = uiRoot.getBoundingClientRect();
+      startLeft = rect.left; startTop = rect.top;
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp, { once: true });
+      e.preventDefault();
+    });
+    function onMove(e) {
+      if (!dragging) return;
+      const dx = e.clientX - startX, dy = e.clientY - startY;
+      const nl = Math.min(window.innerWidth - 40, Math.max(0, startLeft + dx));
+      const nt = Math.min(window.innerHeight - 40, Math.max(0, startTop + dy));
+      uiRoot.style.left = nl + 'px';
+      uiRoot.style.top = nt + 'px';
+      uiRoot.style.right = 'auto';
+      uiRoot.style.bottom = 'auto';
+    }
+    function onUp() {
+      dragging = false;
+      document.removeEventListener('mousemove', onMove);
+    }
+    updateUi();
+  }
+  function updateUi() {
+    if (!uiRoot) return;
+    const on = enabled();
+    statusSpan.textContent = on ? `Status: LIGADO` : 'Status: DESLIGADO';
+    toggleBtn.textContent = on ? 'Desligar' : 'Ligar';
+    toggleBtn.style.background = on ? '#d9534f' : '#5cb85c';
+  }
+  ensureUi();
+
+  // Siga daqui: coloque automação, scan, triggers, etc ☟
+  // ----------------------------------------------------------------
+  // -------------- Aqui siga sua automação Guardian ---------------
+
+  // Exemplo: print de nick validado
+  if (enabled()) {
+    console.log("[GUARDIAN] Ativo para nick:", nick);
+    // ...chame suas funções automáticas aqui, timers, scans, etc
+  }
+
 })();
