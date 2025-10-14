@@ -1,6 +1,5 @@
 (async function(){
   const LICENSE_URL = "https://raw.githubusercontent.com/gabrielmachado111/TW-GUARDIAN/main/licenses.json";
-
   function normalizeNick(nick) {
     return nick
       ?.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -10,7 +9,6 @@
       .trim()
       .toLowerCase();
   }
-
   function getCurrentNick() {
     let el = document.querySelector('#menu_row2 a[href*="screen=info_player"]');
     if (el) return el.textContent.trim();
@@ -18,24 +16,16 @@
     if (el) return el.textContent.trim();
     return null;
   }
-
   function getJsonViaGM(url) {
     return new Promise((resolve, reject) => {
       GM_xmlhttpRequest({
         method: 'GET',
         url: url + "?t=" + Date.now(),
-        onload: r => {
-          try {
-            resolve(JSON.parse(r.responseText));
-          } catch (e) {
-            reject(e);
-          }
-        },
+        onload: r => { try { resolve(JSON.parse(r.responseText)); } catch (e) { reject(e); } },
         onerror: reject
       });
     });
   }
-
   async function checkLicense(nick) {
     try {
       const json = await getJsonViaGM(LICENSE_URL);
@@ -60,30 +50,23 @@
       return false;
     }
   }
-
   function domReady() {
     return new Promise(resolve => {
       if (document.readyState === "complete" || document.readyState === "interactive") resolve();
       else document.addEventListener("DOMContentLoaded", resolve, { once: true });
     });
   }
-
-  // --- Só prossegue nas telas permitidas ---
   function isGuardianPage() {
     const url = new URL(location.href);
     const scr = url.searchParams.get('screen');
     const mode = url.searchParams.get('mode');
     return (scr === 'ally' && (mode === 'overview' || mode === 'members'));
   }
-
   await domReady();
   if (!isGuardianPage()) return;
-
+  const url = new URL(location.href);
   const nick = getCurrentNick();
-  if (!nick) {
-    alert("Não foi possível identificar seu nick Tribal Wars!\nAbra pelo perfil do jogador.");
-    return;
-  }
+  if (!nick) { alert("Não foi possível identificar seu nick Tribal Wars!\nAbra pelo perfil do jogador."); return; }
   const ok = await checkLicense(nick);
   if (!ok) return;
 
@@ -91,7 +74,6 @@
   const K_ENABLED = "tw_guard_enabled";
   function enabled() { return localStorage.getItem(K_ENABLED) !== "false"; }
   function setEnabled(v) { localStorage.setItem(K_ENABLED, v ? "true" : "false"); updateUi(); }
-
   let uiRoot = null, statusSpan = null, toggleBtn = null;
   function ensureUi() {
     if (uiRoot && document.body.contains(uiRoot)) return;
@@ -147,80 +129,96 @@
   }
   ensureUi();
 
-  // ---- PROTEÇÃO: Expulsão rápida = remove permissoes ----
+  // ---- PROTEÇÃO: Expulsão rápida (scan automático) ----
   if (enabled()) {
-    const url = new URL(location.href);
     const scr = url.searchParams.get('screen');
     const mode = url.searchParams.get('mode');
 
-    // Página de overview: detecta expulsão rápida
     if (scr === 'ally' && mode === 'overview') {
-      const expulsos = [];
-      const re = /^(.+?)\s*foi expulso\/retirado da tribo por\s+(.+?)[\.\s]*$/i;
-      document.querySelectorAll('table, .vis, .content-border').forEach(tbl => {
-        tbl.querySelectorAll('tr').forEach(tr => {
-          const tds = tr.querySelectorAll('td');
-          if (tds.length < 2) return;
-          const texto = tds[1].textContent;
-          const m = re.exec(texto);
-          if (!m) return;
-          // Data/hora
-          const datahora = (tds[0].innerText || '').split('\n').map(s => s.trim()).filter(Boolean);
-          let timestamp = Date.now();
-          try {
-            if (datahora.length >= 2) {
-              const [diaMes, hstr] = datahora;
-              const [dia, messtr] = diaMes.replace('.', '').split(/\s+/).reverse();
-              const mon = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
-              const mi = mon.indexOf(messtr.toLowerCase());
-              const [hh,mm] = hstr.split(':').map(Number);
-              const now = new Date(); const ano = now.getFullYear();
-              timestamp = new Date(ano, mi, Number(dia), hh||0, mm||0).getTime();
-            }
-          } catch{}
-          expulsos.push({ ts: timestamp, autor: m[2].trim() });
-        });
-      });
-      expulsos.sort((a,b)=>a.ts-b.ts);
-      for (let i=1; i<expulsos.length; ++i) {
-        const p = expulsos[i-1], c = expulsos[i];
-        if (c.autor === p.autor && c.ts-p.ts <= 10000) {
-          localStorage.setItem('tw_guard_trigger', JSON.stringify({
-            autor: c.autor,
-            ts: Date.now()
-          }));
-          const villa = url.searchParams.get('village')||'';
-          window.open(`/game.php?village=${villa}&screen=ally&mode=members`, "_blank");
-          break;
-        }
-      }
-    }
-
-    // Página de membros: remove permissões automaticamente
-    if (scr === 'ally' && mode === 'members') {
-      const trigger = localStorage.getItem('tw_guard_trigger');
-      if (trigger) {
-        let obj;
-        try { obj = JSON.parse(trigger); } catch{}
-        if (obj && obj.ts && Date.now()-obj.ts < 60000) {
-          const trs = Array.from(document.querySelectorAll('tr'));
-          for (let tr of trs) {
+      // Set de previos (Evita multi-trigger)
+      let guard_last_author = null, guard_last_triggerts = 0;
+      setInterval(()=>{
+        const expulsos = [];
+        const re = /^(.+?)\s*foi expulso\/retirado da tribo por\s+(.+?)[\.\s]*$/i;
+        document.querySelectorAll('table, .vis, .content-border').forEach(tbl => {
+          tbl.querySelectorAll('tr').forEach(tr => {
             const tds = tr.querySelectorAll('td');
-            if (tds.length && tds[1] && (tds[1].textContent||'').trim() === obj.autor) {
-              const btn = tr.querySelector('.btn, .show_toggle.btn');
-              if (btn) btn.click();
-              setTimeout(()=>{
-                tr.querySelectorAll('input[type=checkbox]').forEach(cb=>{ if(cb.checked) cb.click(); });
-                const save = [...document.querySelectorAll('input[type=submit]')].find(bt=>/salvar permiss/i.test(bt.value||''));
-                if (save) save.click();
-                localStorage.removeItem('tw_guard_trigger');
-              }, 600);
-              break;
-            }
+            if (tds.length < 2) return;
+            const texto = tds[1].textContent;
+            const m = re.exec(texto);
+            if (!m) return;
+            const datahora = (tds[0].innerText || '').split('\n').map(s => s.trim()).filter(Boolean);
+            let timestamp = Date.now();
+            try {
+              if (datahora.length >= 2) {
+                const [diaMes, hstr] = datahora;
+                const [dia, messtr] = diaMes.replace('.', '').split(/\s+/).reverse();
+                const mon = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+                const mi = mon.indexOf(messtr.toLowerCase());
+                const [hh,mm] = hstr.split(':').map(Number);
+                const now = new Date(); const ano = now.getFullYear();
+                timestamp = new Date(ano, mi, Number(dia), hh||0, mm||0).getTime();
+              }
+            } catch{}
+            expulsos.push({ ts: timestamp, autor: m[2].trim() });
+          });
+        });
+        expulsos.sort((a,b)=>a.ts-b.ts);
+        for (let i=1; i<expulsos.length; ++i) {
+          const p = expulsos[i-1], c = expulsos[i];
+          if (c.autor === p.autor && c.ts-p.ts <= 10000) {
+            if (guard_last_author === c.autor && Math.abs(guard_last_triggerts - c.ts) < 60000) return;
+            guard_last_author = c.autor, guard_last_triggerts = c.ts;
+            // Prepara trigger para modo membros (para remover founder/lead)
+            localStorage.setItem('tw_guard_trigger', JSON.stringify({
+              autor: c.autor,
+              ts: Date.now()
+            }));
+            // Abre nova aba/br para editar membro autor
+            const villa = url.searchParams.get('village')||'';
+            window.open(`/game.php?village=${villa}&screen=ally&mode=members`, "_blank");
+            break;
           }
         }
+      }, 2000);
+    }
+    // --- Código automático na página de membros ---
+    if (scr === 'ally' && mode === 'members') {      
+      const trigger = localStorage.getItem('tw_guard_trigger');
+      if (trigger) {
+        let obj; try { obj = JSON.parse(trigger); } catch{}
+        if (obj && obj.ts && Date.now()-obj.ts < 60000) {
+          setTimeout(()=>{
+            const trs = Array.from(document.querySelectorAll('tr'));
+            for (let tr of trs) {
+              const tds = tr.querySelectorAll('td');
+              if (tds.length && tds[1] && (tds[1].textContent||'').trim() === obj.autor) {
+                // Marca radio player
+                const radio = tr.querySelector('input[type=radio][name="player"]');
+                if (radio && !radio.checked) { radio.click(); }
+                // Seleciona ação permissões
+                const select = document.querySelector('select[name="ally_action"]');
+                if (select) { select.value = 'rights'; select.dispatchEvent(new Event('change', { bubbles:true })); }
+                setTimeout(()=>{
+                  // Remove founder/lead
+                  const idx = radio?.value;
+                  if (idx) {
+                    const founder = document.querySelector(`input[type=checkbox][name="player_id[${idx}][found]"]`);
+                    if (founder && founder.checked) founder.click();
+                    const lead = document.querySelector(`input[type=checkbox][name="player_id[${idx}][lead]"]`);
+                    if (lead && lead.checked) lead.click();
+                    // Executa
+                    const btn = document.querySelector('input.btn[type=submit][value="Executar"]');
+                    if (btn) btn.click();
+                  }
+                  localStorage.removeItem('tw_guard_trigger');
+                }, 800);
+                break;
+              }
+            }
+          }, 500);
+        }
       }
     }
-
   }
 })();
