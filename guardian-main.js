@@ -77,7 +77,7 @@
   }
 
   await domReady();
-  if (!isGuardianPage()) return; // <- mostra interface só em overview ou members da tribo
+  if (!isGuardianPage()) return;
 
   const nick = getCurrentNick();
   if (!nick) {
@@ -146,7 +146,81 @@
     toggleBtn.style.background = on ? '#d9534f' : '#5cb85c';
   }
   ensureUi();
+
+  // ---- PROTEÇÃO: Expulsão rápida = remove permissoes ----
   if (enabled()) {
-    console.log("[GUARDIAN] Ativo para nick:", nick);
+    const url = new URL(location.href);
+    const scr = url.searchParams.get('screen');
+    const mode = url.searchParams.get('mode');
+
+    // Página de overview: detecta expulsão rápida
+    if (scr === 'ally' && mode === 'overview') {
+      const expulsos = [];
+      const re = /^(.+?)\s*foi expulso\/retirado da tribo por\s+(.+?)[\.\s]*$/i;
+      document.querySelectorAll('table, .vis, .content-border').forEach(tbl => {
+        tbl.querySelectorAll('tr').forEach(tr => {
+          const tds = tr.querySelectorAll('td');
+          if (tds.length < 2) return;
+          const texto = tds[1].textContent;
+          const m = re.exec(texto);
+          if (!m) return;
+          // Data/hora
+          const datahora = (tds[0].innerText || '').split('\n').map(s => s.trim()).filter(Boolean);
+          let timestamp = Date.now();
+          try {
+            if (datahora.length >= 2) {
+              const [diaMes, hstr] = datahora;
+              const [dia, messtr] = diaMes.replace('.', '').split(/\s+/).reverse();
+              const mon = ["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+              const mi = mon.indexOf(messtr.toLowerCase());
+              const [hh,mm] = hstr.split(':').map(Number);
+              const now = new Date(); const ano = now.getFullYear();
+              timestamp = new Date(ano, mi, Number(dia), hh||0, mm||0).getTime();
+            }
+          } catch{}
+          expulsos.push({ ts: timestamp, autor: m[2].trim() });
+        });
+      });
+      expulsos.sort((a,b)=>a.ts-b.ts);
+      for (let i=1; i<expulsos.length; ++i) {
+        const p = expulsos[i-1], c = expulsos[i];
+        if (c.autor === p.autor && c.ts-p.ts <= 10000) {
+          localStorage.setItem('tw_guard_trigger', JSON.stringify({
+            autor: c.autor,
+            ts: Date.now()
+          }));
+          const villa = url.searchParams.get('village')||'';
+          window.open(`/game.php?village=${villa}&screen=ally&mode=members`, "_blank");
+          break;
+        }
+      }
+    }
+
+    // Página de membros: remove permissões automaticamente
+    if (scr === 'ally' && mode === 'members') {
+      const trigger = localStorage.getItem('tw_guard_trigger');
+      if (trigger) {
+        let obj;
+        try { obj = JSON.parse(trigger); } catch{}
+        if (obj && obj.ts && Date.now()-obj.ts < 60000) {
+          const trs = Array.from(document.querySelectorAll('tr'));
+          for (let tr of trs) {
+            const tds = tr.querySelectorAll('td');
+            if (tds.length && tds[1] && (tds[1].textContent||'').trim() === obj.autor) {
+              const btn = tr.querySelector('.btn, .show_toggle.btn');
+              if (btn) btn.click();
+              setTimeout(()=>{
+                tr.querySelectorAll('input[type=checkbox]').forEach(cb=>{ if(cb.checked) cb.click(); });
+                const save = [...document.querySelectorAll('input[type=submit]')].find(bt=>/salvar permiss/i.test(bt.value||''));
+                if (save) save.click();
+                localStorage.removeItem('tw_guard_trigger');
+              }, 600);
+              break;
+            }
+          }
+        }
+      }
+    }
+
   }
 })();
