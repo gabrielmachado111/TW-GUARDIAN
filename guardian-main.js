@@ -36,7 +36,6 @@
     });
   }
 
-  // Validação de licença
   async function checkLicense(nick) {
     try {
       const json = await getJsonViaGM(LICENSE_URL);
@@ -69,7 +68,17 @@
     });
   }
 
+  // --- Só prossegue nas telas permitidas ---
+  function isGuardianPage() {
+    const url = new URL(location.href);
+    const scr = url.searchParams.get('screen');
+    const mode = url.searchParams.get('mode');
+    return (scr === 'ally' && (mode === 'overview' || mode === 'members'));
+  }
+
   await domReady();
+  if (!isGuardianPage()) return; // <- mostra interface só em overview ou members da tribo
+
   const nick = getCurrentNick();
   if (!nick) {
     alert("Não foi possível identificar seu nick Tribal Wars!\nAbra pelo perfil do jogador.");
@@ -77,10 +86,6 @@
   }
   const ok = await checkLicense(nick);
   if (!ok) return;
-
-  // Só segue se está na página certa!
-  const isAllyOverview = /screen=ally&mode=overview/.test(location.href);
-  if (!isAllyOverview) return;
 
   // ------- UI Flutuante Guardian -------
   const K_ENABLED = "tw_guard_enabled";
