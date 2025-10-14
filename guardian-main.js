@@ -41,22 +41,20 @@
     try {
       const json = await getJsonViaGM(LICENSE_URL);
       const normalizedNick = normalizeNick(nick);
-      console.log("[GUARDIAN DEBUG] Nick DOM:", JSON.stringify(nick), "| Normalizado:", normalizedNick, "| Licenças disponíveis:", Object.keys(json));
       for (const jsonKey in json) {
         const kNorm = normalizeNick(jsonKey);
-        console.log("[GUARDIAN DEBUG] JSON KEY:", JSON.stringify(jsonKey), "| Normalizado:", kNorm, "| Match:", kNorm === normalizedNick);
         if (kNorm === normalizedNick) {
-          const expiryStr = json[jsonKey].trim();
+          const expiryStr = String(json[jsonKey] || '').trim();
           const [yyyy, mm, dd] = expiryStr.split('-').map(Number);
-          const expiry = new Date(yyyy, mm - 1, dd, 23, 59, 59);
-          if (!yyyy || !mm || !dd || isNaN(expiry.getTime())) {
-            alert(`Data de licença inválida para o nick '${nick}' (${expiryStr})`);
+          const expiry = new Date(yyyy, mm-1, dd, 23, 59, 59);
+          if (!isFinite(expiry.getTime()) || new Date() > expiry) {
+            alert("Sua licença Guardian expirou!\n\nEntre em contato com o administrador para renovar.");
             return false;
           }
-          return new Date() <= expiry;
+          return true;
         }
       }
-      alert(`Nick '${nick}' não encontrado em licenses.json`);
+      alert("Sua licença Guardian não existe para este nick!\nSolicite ao administrador para liberar.");
       return false;
     } catch (e) {
       alert("Erro ao validar licença: " + e);
@@ -72,40 +70,32 @@
   }
 
   await domReady();
-
   const nick = getCurrentNick();
   if (!nick) {
-    alert("Não foi possível identificar seu nick no topo da página!\nAcesse pelo perfil da conta Tribal Wars.");
+    alert("Não foi possível identificar seu nick Tribal Wars!\nAbra pelo perfil do jogador.");
     return;
   }
-
   const ok = await checkLicense(nick);
-  if (!ok) {
-    alert(`Seu nick '${nick}' não possui licença válida ou está vencida.\nContate o administrador para liberar acesso.`);
-    return;
-  }
+  if (!ok) return;
+
+  // Só segue se está na página certa!
+  const isAllyOverview = /screen=ally&mode=overview/.test(location.href);
+  if (!isAllyOverview) return;
 
   // ------- UI Flutuante Guardian -------
-  // Toggle via localStorage, mas pode adaptar pra GM_getValue se preferir
   const K_ENABLED = "tw_guard_enabled";
   function enabled() { return localStorage.getItem(K_ENABLED) !== "false"; }
   function setEnabled(v) { localStorage.setItem(K_ENABLED, v ? "true" : "false"); updateUi(); }
-  function nowTs() { return Date.now(); }
 
-  // UI flutuante
   let uiRoot = null, statusSpan = null, toggleBtn = null;
-
   function ensureUi() {
     if (uiRoot && document.body.contains(uiRoot)) return;
-
     uiRoot = document.createElement('div');
     uiRoot.id = 'tw-guard-ui';
     uiRoot.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:2147483647;background:#101010;color:#eee;border:1px solid #444;border-radius:8px;min-width:220px;box-shadow:0 2px 8px rgba(0,0,0,.4);font:12px Arial';
-
     const header = document.createElement('div');
     header.textContent = 'Tribe Guardian';
     header.style.cssText = 'cursor:move;font-weight:bold;padding:8px 12px;border-bottom:1px solid #333;background:#181818;border-top-left-radius:8px;border-top-right-radius:8px;';
-
     const body = document.createElement('div');
     body.style.cssText = 'padding:10px 12px;';
     statusSpan = document.createElement('div');
@@ -116,16 +106,12 @@
     const hint = document.createElement('div');
     hint.textContent = 'Arraste pelo topo para mover.';
     hint.style.cssText = 'margin-top:6px;color:#bbb;';
-
     body.append(statusSpan, toggleBtn, hint);
     uiRoot.append(header, body);
     document.body.appendChild(uiRoot);
-
-    // Drag & position
     let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
     header.addEventListener('mousedown', (e) => {
-      dragging = true;
-      startX = e.clientX; startY = e.clientY;
+      dragging = true; startX = e.clientX; startY = e.clientY;
       const rect = uiRoot.getBoundingClientRect();
       startLeft = rect.left; startTop = rect.top;
       document.addEventListener('mousemove', onMove);
@@ -143,8 +129,7 @@
       uiRoot.style.bottom = 'auto';
     }
     function onUp() {
-      dragging = false;
-      document.removeEventListener('mousemove', onMove);
+      dragging = false; document.removeEventListener('mousemove', onMove);
     }
     updateUi();
   }
@@ -156,15 +141,7 @@
     toggleBtn.style.background = on ? '#d9534f' : '#5cb85c';
   }
   ensureUi();
-
-  // Siga daqui: coloque automação, scan, triggers, etc ☟
-  // ----------------------------------------------------------------
-  // -------------- Aqui siga sua automação Guardian ---------------
-
-  // Exemplo: print de nick validado
   if (enabled()) {
     console.log("[GUARDIAN] Ativo para nick:", nick);
-    // ...chame suas funções automáticas aqui, timers, scans, etc
   }
-
 })();
